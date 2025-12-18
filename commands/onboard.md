@@ -15,36 +15,32 @@ Perform complete Serena project setup and session initialization.
 ### 1. Check Status & Activate Project
 
 ```bash
-/home/sebastian/.local/bin/serena status
+serena get_current_config
 ```
 
-If no project is active or wrong project is active, activate it using `--project` flag:
+If no project is active or wrong project is active:
 
 ```bash
-/home/sebastian/.local/bin/serena activate --project "$(pwd)"
+serena activate_project --project "$(pwd)"
 ```
 
-**Note**: The `--project` flag is required. Positional arguments are ignored by skills-client.
-
-If activation times out (common for large codebases like Magento), run `serena status` to verify - the project may have activated despite the timeout.
+If activation times out (common for large codebases), run `serena get_current_config` to verify.
 
 ### 2. List Available Memories
 
 ```bash
-/home/sebastian/.local/bin/serena memory/list
+serena list_memories
 ```
 
 ### 3. Read Key Memories
 
 ```bash
 # Project overview
-/home/sebastian/.local/bin/serena memory/read --name project_overview
+serena read_memory --memory_file_name project_overview
 
 # Any task context from previous session
-/home/sebastian/.local/bin/serena memory/read --name task_context
+serena read_memory --memory_file_name task_context
 ```
-
-**Note**: Memory commands use `/` separator (e.g., `memory/list`, `memory/read`).
 
 ## Output
 

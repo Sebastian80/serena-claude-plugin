@@ -1,8 +1,7 @@
 """
 Serena Plugin Scripts - Bridge compatibility layer.
 
-This module re-exports from the main serena package for backwards
-compatibility with the bridge's plugin discovery mechanism.
+Re-exports SerenaPlugin from the main serena package.
 """
 
 import sys
@@ -15,8 +14,5 @@ if str(_plugin_root) not in sys.path:
 
 # Re-export plugin class for bridge compatibility
 from serena.plugin import SerenaPlugin
-from serena.connector import SerenaConnector
-from serena.response import success_response, error_response
-from serena.deps import serena
 
-__all__ = ["SerenaPlugin", "SerenaConnector", "success_response", "error_response", "serena"]
+__all__ = ["SerenaPlugin"]

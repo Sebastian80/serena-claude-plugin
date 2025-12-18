@@ -1,7 +1,7 @@
 {
   "name": "serena",
-  "version": "1.0.0",
-  "description": "Semantic code intelligence for 30+ languages via LSP. Symbol search, references, refactoring, cross-session memory, project onboarding.",
+  "version": "1.1.0",
+  "description": "Semantic PHP code navigation via LSP. Symbol search, references, refactoring, cross-session memory.",
   "author": {
     "name": "Sebastian"
   },

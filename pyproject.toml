@@ -1,6 +1,6 @@
 [project]
 name = "serena"
-version = "1.1.0"
+version = "2.0.0"
 description = "Semantic code intelligence via LSP for AI agents"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -8,7 +8,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Sebastian" }
 ]
-keywords = ["ai", "lsp", "semantic", "code-navigation", "claude"]
+keywords = ["ai", "lsp", "semantic", "code-navigation", "claude", "mcp"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -20,27 +20,17 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
-dependencies = [
-    "httpx>=0.27.0",
-    "typer>=0.12.0",
-    "rich>=13.0.0",
-    "structlog>=23.2.0",
-]
+# Minimal deps - plugin runs in bridge's venv, CLI routes through bridge
+dependencies = []
 
 [project.optional-dependencies]
-bridge = [
-    "fastapi>=0.104.0",
-]
 dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
-    "fastapi>=0.104.0",  # For testing plugin
 ]
 
-[project.scripts]
-serena = "serena.cli.main:main"
+# No CLI entry point - CLI routes through bridge
 
 [build-system]
 requires = ["hatchling"]

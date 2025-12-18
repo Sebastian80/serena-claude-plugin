@@ -4,9 +4,9 @@ allowed-tools:
   - Bash
 ---
 
-# /serena-save - Persist Session Context
+# /serena:save - Persist Session Context
 
-Save current session state using folder-organized memories.
+Save current session state to Serena memories.
 
 ## Execute These Steps
 
@@ -16,141 +16,78 @@ Before saving, analyze the current session:
 - What tasks were worked on?
 - What was accomplished?
 - What's still in progress?
-- What was learned (errors, patterns, insights)?
-- What should happen next?
+- What was learned?
 
 ### 2. Save Session State
+
 ```bash
-/home/sebastian/.local/bin/serena memory write active/sessions/current "## Session: $(date '+%Y-%m-%d')
+serena write_memory --memory_file_name "sessions/$(date '+%Y-%m-%d')" --content "## Session: $(date '+%Y-%m-%d')
 
 ### What I Worked On
-- [list main tasks/topics from this session]
+- [list main tasks]
 
 ### Current State
-[describe where things are at - what's working, what's not]
-
-### Blockers/Issues
-[any problems encountered, errors, or decisions needed]
+[describe where things are at]
 
 ### Key Files Modified
-- [file1.php]
-- [file2.ts]
+- [file paths]
 "
 ```
 
-### 3. Save Task Progress (if working on specific task)
-```bash
-/home/sebastian/.local/bin/serena memory write active/tasks/HMKG-XXXX "## Task: [task name]
+### 3. Save Task Progress (if working on ticket)
 
-### Status: [in_progress|blocked|review|done]
+```bash
+serena write_memory --memory_file_name "tasks/HMKG-XXXX" --content "## Task: [name]
+
+### Status: in_progress
 
 ### Completed
-- [x] [completed step 1]
-- [x] [completed step 2]
+- [x] Step 1
 
 ### Remaining
-- [ ] [next step]
-- [ ] [future step]
+- [ ] Next step
 
 ### Key Files
-- [affected file paths]
-
-### Notes
-[any important context for resuming]
+- [file paths]
 "
 ```
 
-### 4. Save Learnings (if discovered something useful)
+### 4. Save Learnings (if discovered something)
 
-For mistakes/errors:
 ```bash
-/home/sebastian/.local/bin/serena memory write learnings/mistakes/[topic] "## [Error description]
-
-### What Went Wrong
-[description]
-
-### Root Cause
-[why it happened]
-
-### Solution
-[how to fix/avoid]
-"
-```
-
-For discoveries:
-```bash
-/home/sebastian/.local/bin/serena memory write learnings/discoveries/[topic] "## [Discovery]
+serena write_memory --memory_file_name "learnings/[topic]" --content "## [Topic]
 
 ### Context
 [when you might need this]
 
 ### Details
 [what you learned]
-
-### Example
-\`\`\`
-[code or commands]
-\`\`\`
 "
 ```
 
-### 5. Archive Completed Tasks (if any task is done)
+### 5. Archive Completed Tasks
+
 ```bash
-# Archive completed tasks to preserve history
-/home/sebastian/.local/bin/serena memory archive active/tasks/HMKG-XXXX --category tasks
+serena archive_memory --memory_file_name "tasks/HMKG-XXXX" --category "completed"
 ```
 
 ### 6. Confirm Save
+
 ```bash
-/home/sebastian/.local/bin/serena memory tree active
-/home/sebastian/.local/bin/serena memory stats
+serena list_memories
+serena memory_stats
 ```
 
 Report what was saved:
 ```
 ## Session Saved
 
-**Active Memories:**
-- active/sessions/current (session state)
-- active/tasks/[ticket] (task progress)
+**Memories Updated:**
+- sessions/[date]
+- tasks/[ticket]
 
 **Learnings Added:**
-- learnings/[category]/[topic]
-
-**Archived:**
-- [any completed tasks]
+- learnings/[topic]
 
 Ready for session handoff.
-```
-
-## Smart Save Triggers
-
-Save automatically when:
-- User says "save session", "save progress", "I'm done for now"
-- Before switching to a different project
-- After completing a major task
-- When encountering a blocker that needs external input
-
-## Memory Folder Conventions
-
-| Folder | Purpose | When to Use |
-|--------|---------|-------------|
-| `active/sessions/current` | Current session state | Every /serena-save |
-| `active/tasks/TICKET` | Task-specific progress | One per active task |
-| `learnings/mistakes/` | Errors & solutions | After debugging issues |
-| `learnings/discoveries/` | Useful findings | When learning something new |
-| `learnings/commands/` | Helpful snippets | Useful CLI commands |
-| `reference/architecture/` | System design notes | After major exploration |
-| `reference/patterns/` | Code patterns | When documenting approaches |
-
-## Lifecycle
-
-```
-CREATE → active/tasks/TICKET
-  ↓
-UPDATE → As work progresses
-  ↓
-COMPLETE → archive with: serena memory archive active/tasks/TICKET --category tasks
-  ↓
-LEARNING → Extract insights to learnings/
 ```

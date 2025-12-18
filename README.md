@@ -1,105 +1,81 @@
 # Serena Integration Plugin
 
-Claude Code integration with Serena LSP for semantic code navigation (30+ languages).
+Claude Code integration with Serena LSP for semantic PHP code navigation.
 
 ## Features
 
-- **serena skill**: Core Serena usage with daemon-based CLI
-- **php-explore hook**: Automatically injects Serena context into Explore agent for PHP projects
+- **serena skill**: Core Serena usage guidance and command reference
 - **Slash commands**: `/serena:onboard`, `/serena:load`, `/serena:save`
-- **Agents**: serena-explore, framework-explore
+- **CLI wrapper**: Routes to Serena MCP server via AI Tool Bridge
 
 ## Architecture
 
 ```
-serena CLI (thin) → HTTP daemon (port 9122) → Serena MCP server (port 9121)
-     ~10ms              keeps Python warm           30+ LSP backends
+serena CLI → AI Tool Bridge → Serena MCP server (port 9121)
+                                    ↓
+                              Intelephense LSP
 ```
-
-Performance: ~120ms per command (vs ~270ms without daemon)
-
-## When This Plugin Activates
-
-The explore hook triggers for projects with:
-- `composer.json` present (PHP projects)
 
 ## Setup
 
-### 1. Enable Plugin
+### 1. Serena MCP Server
 
-Already enabled via marketplace.
+Run Serena via Docker:
+
+```bash
+cd ~/workspace/KI_Tools/serena
+docker compose up -d
+```
 
 ### 2. CLI Wrapper
 
-The CLI wrapper at `~/.local/bin/serena` routes to the daemon-based CLI:
+The CLI at `~/.local/bin/serena` routes through the bridge:
 
 ```bash
-#!/bin/bash
-SCRIPTS_DIR=~/.claude/plugins/marketplaces/sebastian-marketplace/plugins/serena-integration/skills/serena/scripts
-exec "$SCRIPTS_DIR/serena-daemon-cli" "$@"
+# Setup (one-time)
+~/.claude/plugins/.../serena-integration/bin/serena setup
 ```
-
-Make executable: `chmod +x ~/.local/bin/serena`
 
 ### 3. Permissions
 
-Add to `~/.claude/settings.json`:
+Already configured in `~/.claude/settings.json`:
+- `Bash(serena:*)` - CLI access
+- `Skill(serena:*)` - Skill access
 
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(/home/sebastian/.local/bin/serena:*)",
-      "Bash(serena:*)",
-      "Skill(serena-integration:*)"
-    ]
-  }
-}
-```
-
-## Serena CLI Commands
+## CLI Commands
 
 ```bash
-serena status                        # Check connection
-serena daemon status                 # Check daemon health
-serena find Customer --kind class    # Find symbol
-serena refs "Customer/getName" file  # Find references
-serena overview file.php             # File structure
-serena memory list                   # List memories
+serena get_current_config                    # Check status
+serena activate_project --project /path      # Activate project
+serena find_symbol --name_path_pattern X     # Find symbol
+serena find_referencing_symbols --name_path X --relative_path file.php
+serena get_symbols_overview --relative_path file.php
+serena search_for_pattern --substring_pattern "pattern"
+serena list_memories                         # List memories
+serena read_memory --memory_file_name name   # Read memory
+serena help                                  # Full command list
+serena help <tool>                           # Tool-specific help
 ```
-
-## Daemon Management
-
-```bash
-serena daemon start     # Start daemon manually
-serena daemon stop      # Stop daemon
-serena daemon status    # Check if running
-serena daemon restart   # Restart daemon
-```
-
-The daemon auto-starts on first use and auto-stops after 30min idle.
 
 ## Skills
 
 ### serena
 
-Core Serena usage - semantic code navigation via LSP. Includes:
-- Automatic triggers for code navigation tasks
-- Anti-rationalization patterns (Serena-first rule)
-- Performance best practices
-- Troubleshooting guide
+Core Serena usage - semantic PHP code navigation via LSP:
+- Iron law: Use Serena for PHP, not grep
+- Tool selection: `find_symbol` for PHP, `search_for_pattern` for JS
+- Command reference and troubleshooting
 
-## Scripts Structure
+## Project Configuration
 
-```
-skills/serena/scripts/
-├── serena-daemon-cli     # Main CLI entry point
-├── serena-unified        # Legacy full CLI (httpx/typer)
-├── serena_cli/           # Full Python CLI package
-│   ├── client.py         # httpx async client
-│   ├── cli.py            # typer CLI
-│   └── formatters.py     # Output formatting
-└── serena_daemon/        # Daemon architecture
-    ├── server.py         # HTTP daemon server
-    └── client.py         # Stdlib-only thin client
+Per-project settings in `.serena/project.yml`:
+
+```yaml
+languages:
+- php
+
+ignore_all_files_in_gitignore: false
+ignored_paths:
+  - node_modules
+  - var/cache
 ```

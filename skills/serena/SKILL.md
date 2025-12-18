@@ -26,8 +26,8 @@ Using grep/glob when Serena is available? Delete your search. Use Serena.
 
 If you catch yourself thinking ANY of these, STOP:
 
-- "Let me just grep quickly" → WRONG. `serena find` is faster AND accurate.
-- "Grep will find all usages" → WRONG. Grep finds TEXT. `serena refs` finds CODE REFERENCES.
+- "Let me just grep quickly" → WRONG. `serena find_symbol` is faster AND accurate.
+- "Grep will find all usages" → WRONG. Grep finds TEXT. `serena find_referencing_symbols` finds CODE REFERENCES.
 - "I'll use the Task/Explore agent" → WRONG. Use Serena directly.
 - "This is a simple search" → WRONG. Simple searches benefit MOST from semantic tools.
 - "I'll search src/ first, then global" → WRONG. For integration classes, this ALWAYS fails.
@@ -40,14 +40,14 @@ If you catch yourself thinking ANY of these, STOP:
 
 ## MANDATORY: Global Search Decision Gate
 
-**BEFORE adding `--path`, answer:**
+**BEFORE adding `--relative_path`, answer:**
 
 ```
 Pattern contains: Payment, Transaction, Checkout, Order, Invoice,
                  Mollie, Stripe, Provider, Integration, Gateway?
 
-YES/UNSURE → Search globally. NO --path.
-NO (and user specified scope) → MAY use --path.
+YES/UNSURE → Search globally. NO --relative_path.
+NO (and user specified scope) → MAY use --relative_path.
 ```
 
 30 seconds complete > 0.5s + confusion + 30s retry.
@@ -61,7 +61,7 @@ NO (and user specified scope) → MAY use --path.
 - Dispatching Explore agent for code navigation → Use Serena
 - Running multiple serena commands in parallel → Run sequentially
 - Falling back to grep after one timeout → Follow timeout steps
-- Using serena for JavaScript files → Use grep (JS not indexed)
+- Using `find_symbol` for JavaScript → Use `search_for_pattern` (JS not indexed by LSP)
 - Using serena for Twig/YAML → Use grep (not indexed)
 
 **Check the "When to Use vs NOT Use" table.**
@@ -72,52 +72,56 @@ NO (and user specified scope) → MAY use --path.
 
 | Task | Command |
 |------|---------|
-| Find class | `serena find --pattern X --kind class` |
-| Find method | `serena find --pattern X --kind method` |
-| Find with source | `serena find --pattern X --kind class --body` |
-| Get class methods | `serena find --pattern X --kind class --depth 1` |
-| Restrict to path | `serena find --pattern X --path src/` |
+| Find class | `serena find_symbol --name_path_pattern X` |
+| Find method in class | `serena find_symbol --name_path_pattern "Class/method"` |
+| Find with source | `serena find_symbol --name_path_pattern X --include_body true` |
+| Get class methods | `serena find_symbol --name_path_pattern X --depth 1` |
+| Restrict to path | `serena find_symbol --name_path_pattern X --relative_path src/` |
+| Substring match | `serena find_symbol --name_path_pattern X --substring_matching true` |
 
 ### Finding References
 
 ```bash
-# Step 1: Find symbol to get path
-serena find --pattern CustomerService --kind class
+# Step 1: Find symbol to get exact path
+serena find_symbol --name_path_pattern CustomerService
 
-# Step 2: Find who uses it
-serena refs --symbol "CustomerService" --file "src/Service/CustomerService.php"
+# Step 2: Find who uses it (requires file path)
+serena find_referencing_symbols --name_path CustomerService --relative_path src/Service/CustomerService.php
 ```
 
 ### Common Commands
 
 | Task | Command |
 |------|---------|
-| Check status | `serena status` |
-| Regex search | `serena search --pattern "regex" --path src/` |
-| File structure | `serena overview --file path.php` |
-| Pre-built searches | `serena recipe --name entities` |
+| Check status | `serena get_current_config` |
+| Regex search | `serena search_for_pattern --substring_pattern "regex"` |
+| File structure | `serena get_symbols_overview --relative_path path.php` |
+| List files | `serena list_dir --relative_path src/ --recursive false` |
+| Find file | `serena find_file --file_mask "*.php" --relative_path src/` |
 
 ## Automatic Triggers
 
 | User Says | You Run |
 |-----------|---------|
-| "Find class X" / "Where is X defined" | `serena find --pattern X --kind class --body` |
-| "Who calls X" / "Find usages" | `serena refs --symbol X --file file.php` |
-| "Find all controllers/entities" | `serena recipe --name controllers` |
-| "What methods does X have" | `serena find --pattern X --kind class --depth 1` |
+| "Find class X" / "Where is X defined" | `serena find_symbol --name_path_pattern X --include_body true` |
+| "Who calls X" / "Find usages" | `serena find_referencing_symbols --name_path X --relative_path file.php` |
+| "What methods does X have" | `serena find_symbol --name_path_pattern X --depth 1` |
+| "Search for pattern" | `serena search_for_pattern --substring_pattern "pattern"` |
 
 ## When to Use vs NOT Use
 
-| USE SERENA | DON'T USE SERENA |
-|------------|------------------|
-| PHP class/method/function definitions | Template files (.twig, .html) |
-| Finding PHP references | JavaScript files |
-| PHP code structure analysis | YAML/XML config files |
-| Languages with LSP configured | Text in comments/strings |
+| USE `find_symbol` | USE `search_for_pattern` | USE grep |
+|-------------------|--------------------------|----------|
+| PHP class/method/function | JavaScript files | Twig templates |
+| PHP references | Text in AMD modules | HTML files |
+| PHP code structure | | YAML/XML config |
 
-**Rule:** Serena = languages in `.serena/project.yml`. Grep for everything else.
+**Rule:**
+- `find_symbol` = languages in `.serena/project.yml` (semantic LSP search)
+- `search_for_pattern` = JS, text patterns (respects ignored_paths)
+- grep = templates, config files
 
-**This project:** Only `php` is configured. YAML/JS/Twig use grep.
+**This project:** Only `php` is LSP-configured.
 
 **Check config:** `cat .serena/project.yml | grep -A5 "languages:"`
 
@@ -127,12 +131,22 @@ When searching across PHP + JS + templates + config:
 
 | File Type | Tool | Why |
 |-----------|------|-----|
-| PHP classes/methods | `serena find` | Semantic code navigation |
-| JavaScript files | `grep` | JS not indexed by Intelephense |
+| PHP classes/methods | `serena find_symbol` | Semantic code navigation |
+| JavaScript files | `serena search_for_pattern` | Text search, respects ignored_paths |
 | Twig/HTML templates | `grep` | Templates not indexed |
 | YAML/XML config | `grep` | Config not indexed |
 
-**Workflow:** Search PHP FIRST (Serena), then JS/templates/config (grep).
+**JS Search Example:**
+```bash
+serena search_for_pattern --substring_pattern "ShippingMethodsView" --paths_include_glob "*.js"
+```
+
+**Why search_for_pattern over grep for JS?**
+- Respects project's `ignored_paths` (skips node_modules, var/, etc.)
+- Returns line numbers and context
+- Works inside AMD `define()` wrappers (which LSP can't parse)
+
+**Workflow:** Search PHP FIRST (Serena), then JS/templates/config.
 
 **Pattern expansion:** If `ShippingCost` returns nothing, try `shipping_cost` (snake_case) or translation keys.
 
@@ -140,21 +154,21 @@ When searching across PHP + JS + templates + config:
 
 | Mistake | Fix |
 |---------|-----|
-| "No symbols found" | Broaden pattern: `CustomerEntity` → `Customer` |
-| Empty refs | Use `serena find` first to get exact symbol path |
-| Incomplete results | Remove `--path` - may be missing vendor code |
-| Empty results | Run `serena status` - project not activated |
+| "No symbols found" | Use `--substring_matching true` or broaden pattern: `CustomerEntity` → `Customer` |
+| Empty refs | Use `find_symbol` first to get exact symbol path and file |
+| Incomplete results | Remove `--relative_path` - may be missing vendor code |
+| Empty results | Run `serena get_current_config` - project not activated |
 | Timeout | See "If Serena Times Out" below |
 
 ## If Serena Times Out
 
 **DO NOT immediately fall back to grep.** Try in order:
 
-1. Run `serena status` - verify project is activated
-2. Broaden pattern: `PaymentMethodProvider` → `PaymentMethod`
-3. Add `--path` to reduce scope (only if NOT an integration pattern)
-4. Try `serena search` (regex) instead of `serena find` (semantic)
-5. Check if LSP server needs restart: `serena activate --project .`
+1. Run `serena get_current_config` - verify project is activated
+2. Use `--substring_matching true` or broaden pattern: `PaymentMethodProvider` → `PaymentMethod`
+3. Add `--relative_path` to reduce scope (only if NOT an integration pattern)
+4. Try `serena search_for_pattern` (regex) instead of `find_symbol` (semantic)
+5. Check if LSP server needs restart: `serena activate_project --project_name_or_path .`
 
 **Only after all above fail:** Use grep WITH documentation that results may be incomplete.
 
@@ -171,16 +185,16 @@ When searching across PHP + JS + templates + config:
 
 Before moving on from a code search task:
 
-- [ ] Used `serena find` instead of grep for code lookup
+- [ ] Used `serena find_symbol` instead of grep for code lookup
 - [ ] Used global search for integration patterns (Payment, Order, Mollie, etc.)
-- [ ] Ran `serena status` if results were empty
-- [ ] Used `--kind class --depth 1` to get class methods (not just `--depth 1`)
+- [ ] Ran `serena get_current_config` if results were empty
+- [ ] Used `--depth 1` to get class methods
 
 ## Project Activation
 
 ```bash
-serena status                              # Check current project
-serena activate --project /path/to/project  # Activate if needed
+serena get_current_config                              # Check current project
+serena activate_project --project_name_or_path /path/to/project  # Activate if needed
 ```
 
 ## Deep Reference
@@ -189,9 +203,10 @@ Only read if Quick Reference doesn't answer your question:
 
 | File | When to Read |
 |------|--------------|
-| `references/cli-reference.md` | Need exact parameter syntax |
-| `references/symbol-kinds.md` | Filter by symbol type, symbol path format |
-| `references/recipes.md` | Framework-specific searches (Oro, Mollie) |
-| `references/editing-patterns.md` | Complex code edits |
+| `references/symbol-kinds.md` | Filter by symbol type (include_kinds/exclude_kinds integers) |
+| `references/editing-patterns.md` | Complex code edits with replace_symbol_body |
+| `references/session-handoff.md` | Serena memory system for session continuity |
 
 **For most tasks, the Quick Reference above is sufficient.**
+
+**Get full tool help:** `serena help <tool_name>` (e.g., `serena help find_symbol`)

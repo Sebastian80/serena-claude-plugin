@@ -1,22 +1,18 @@
 """
 Serena - Semantic code intelligence via LSP for AI agents.
 
-Provides symbol search, references, refactoring, cross-session memory,
-and project onboarding for 30+ programming languages.
+Thin plugin that auto-discovers and exposes Serena MCP tools via the bridge.
 """
 
-__version__ = "1.1.0"
+__version__ = "2.0.0"
 
 
 def __getattr__(name: str):
-    """Lazy imports for optional dependencies (fastapi for plugin)."""
-    if name == "SerenaConnector":
-        from .connector import SerenaConnector
-        return SerenaConnector
+    """Lazy import for SerenaPlugin (requires fastapi/bridge deps)."""
     if name == "SerenaPlugin":
         from .plugin import SerenaPlugin
         return SerenaPlugin
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["SerenaConnector", "SerenaPlugin", "__version__"]
+__all__ = ["SerenaPlugin", "__version__"]
