@@ -7,19 +7,6 @@
     "email": "sebastian.ertner@netresearch.de"
   },
   "license": "MIT",
-  "cli": {
-    "command": "serena",
-    "script": "bin/serena"
-  },
-  "skills": [
-    "skills/serena"
-  ],
-  "commands": [
-    "commands/onboard.md",
-    "commands/load.md",
-    "commands/save.md"
-  ],
-  "dependencies": [
-    "httpx>=0.25"
-  ]
+  "repository": "https://github.com/Sebastian80/serena-claude-plugin",
+  "keywords": ["serena", "lsp", "php", "semantic", "code-navigation"]
 }
