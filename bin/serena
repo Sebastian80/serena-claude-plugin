@@ -1,25 +1,68 @@
 #!/bin/bash
-# Serena CLI - routes commands to MCP server via bridge
-# Auto-discovers all tools from Serena MCP server
+#
+# Serena CLI - Standalone MCP client
+#
+# Talks directly to Serena's MCP server (streamable-http transport).
+# No bridge dependency.
+#
+# Usage:
+#   serena setup              # First-time setup
+#   serena help               # List available tools
+#   serena help <tool>        # Show tool details
+#   serena get_current_config # Check project status
+#   serena find_symbol --name_path_pattern X
+#
 
 set -e
 
-PLUGIN_DIR="$(dirname "$(dirname "$(realpath "$0")")")"
-BRIDGE_VENV="${BRIDGE_VENV:-$HOME/.claude/plugins/marketplaces/sebastian-marketplace/plugins/ai-tool-bridge/.venv}"
+# === Configuration ===
+SCRIPT_PATH="$(realpath "$0")"
+PLUGIN_DIR="$(dirname "$(dirname "$SCRIPT_PATH")")"
+SERENA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/serena-cli"
+VENV_DIR="$SERENA_HOME/.venv"
+LOCAL_BIN="$HOME/.local/bin"
+SYMLINK="$LOCAL_BIN/serena"
+SERENA_URL="${SERENA_URL:-http://localhost:9121}"
 CLAUDE_SETTINGS="$HOME/.claude/settings.local.json"
 
-# Add permission to Claude settings if not present
+# === Helper Functions ===
+
+log() {
+    echo "[serena] $*" >&2
+}
+
+ensure_venv() {
+    if [[ ! -d "$VENV_DIR" ]]; then
+        log "Creating virtual environment..."
+        mkdir -p "$SERENA_HOME"
+        python3 -m venv "$VENV_DIR"
+
+        log "Installing dependencies..."
+        "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+        "$VENV_DIR/bin/pip" install --quiet httpx
+
+        log "Setup complete."
+    fi
+}
+
+ensure_symlink() {
+    if [[ ! -L "$SYMLINK" ]] || [[ "$(readlink "$SYMLINK" 2>/dev/null)" != "$SCRIPT_PATH" ]]; then
+        mkdir -p "$LOCAL_BIN"
+        ln -sf "$SCRIPT_PATH" "$SYMLINK"
+        log "Installed: serena -> $SCRIPT_PATH"
+    fi
+}
+
 add_claude_permission() {
     local perm="$1"
 
     if ! command -v jq &>/dev/null; then
-        echo "Note: jq not found, skipping permission setup" >&2
         return
     fi
 
     if [[ ! -f "$CLAUDE_SETTINGS" ]]; then
         mkdir -p "$(dirname "$CLAUDE_SETTINGS")"
-        echo '{"permissions":{"allow":[],"deny":[],"ask":[]}}' > "$CLAUDE_SETTINGS"
+        echo '{"permissions":{"allow":[]}}' > "$CLAUDE_SETTINGS"
     fi
 
     if jq -e ".permissions.allow | index(\"$perm\")" "$CLAUDE_SETTINGS" &>/dev/null; then
@@ -29,33 +72,223 @@ add_claude_permission() {
     local tmp=$(mktemp)
     if jq ".permissions.allow += [\"$perm\"]" "$CLAUDE_SETTINGS" > "$tmp"; then
         mv "$tmp" "$CLAUDE_SETTINGS"
-        echo "Added Claude permission: $perm" >&2
+        log "Added Claude permission: $perm"
     else
         rm -f "$tmp"
     fi
 }
 
-# Handle setup command
-if [[ "$1" == "setup" ]]; then
-    echo "Setting up Serena CLI..." >&2
+# Python script for MCP communication
+run_mcp_command() {
+    SERENA_URL="$SERENA_URL" "$VENV_DIR/bin/python3" - "$@" << 'PYTHON_SCRIPT'
+import sys
+import json
+import os
 
-    # Create symlink in ~/.local/bin
-    LOCAL_BIN="$HOME/.local/bin"
-    SERENA_LINK="$LOCAL_BIN/serena"
-    SERENA_BIN="$PLUGIN_DIR/bin/serena"
+import httpx
 
-    if [[ ! -L "$SERENA_LINK" ]] || [[ "$(readlink "$SERENA_LINK")" != "$SERENA_BIN" ]]; then
-        mkdir -p "$LOCAL_BIN"
-        ln -sf "$SERENA_BIN" "$SERENA_LINK"
-        echo "Created symlink: serena -> $SERENA_BIN" >&2
-    fi
+SERENA_URL = os.environ.get('SERENA_URL', 'http://localhost:9121')
+MCP_URL = f"{SERENA_URL}/mcp"
 
-    # Add Claude permission
-    add_claude_permission 'Bash(serena:*)'
+def parse_args(args):
+    """Parse --key value pairs into dict."""
+    result = {}
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg.startswith('--'):
+            key = arg[2:]
+            if i + 1 < len(args) and not args[i + 1].startswith('--'):
+                value = args[i + 1]
+                if value.lower() == 'true':
+                    result[key] = True
+                elif value.lower() == 'false':
+                    result[key] = False
+                else:
+                    try:
+                        result[key] = json.loads(value)
+                    except:
+                        result[key] = value
+                i += 2
+            else:
+                result[key] = True
+                i += 1
+        else:
+            i += 1
+    return result
 
-    echo "Serena CLI ready." >&2
-    exit 0
-fi
+def parse_sse(response):
+    """Parse SSE stream and return JSON data."""
+    for line in response.iter_lines():
+        if line.startswith("data: "):
+            data = line[6:]
+            if data.strip():
+                try:
+                    return json.loads(data)
+                except json.JSONDecodeError:
+                    pass
+    return None
 
-# Route all commands through bridge
-exec "$BRIDGE_VENV/bin/bridge" serena "$@"
+class MCPClient:
+    """MCP streamable-http client."""
+
+    def __init__(self):
+        self.session_id = None
+        self.headers = {
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        }
+
+    def initialize(self):
+        """Initialize MCP session with proper handshake."""
+        # Send initialize request
+        request = {
+            "jsonrpc": "2.0",
+            "id": "init",
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "serena-cli", "version": "2.0.0"}
+            }
+        }
+
+        with httpx.Client(timeout=30.0) as client:
+            with client.stream("POST", MCP_URL, json=request, headers=self.headers) as response:
+                self.session_id = response.headers.get("mcp-session-id")
+                parse_sse(response)  # Consume init response
+
+        if not self.session_id:
+            raise Exception("Failed to get session ID")
+
+        # Send initialized notification to complete handshake
+        self.headers["mcp-session-id"] = self.session_id
+        notification = {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}}
+
+        with httpx.Client(timeout=30.0) as client:
+            client.post(MCP_URL, json=notification, headers=self.headers)
+
+    def request(self, method, params, request_id="req"):
+        """Make MCP request."""
+        request = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": method,
+            "params": params
+        }
+
+        with httpx.Client(timeout=120.0) as client:
+            with client.stream("POST", MCP_URL, json=request, headers=self.headers) as response:
+                return parse_sse(response)
+
+    def call_tool(self, tool_name, params):
+        """Call an MCP tool."""
+        result = self.request("tools/call", {"name": tool_name, "arguments": params}, "call")
+
+        if result:
+            if "error" in result:
+                return None, result["error"].get("message", str(result["error"]))
+
+            content = result.get("result", {}).get("content", [])
+            text_parts = []
+            for item in content:
+                if item.get("type") == "text":
+                    text_parts.append(item.get("text", ""))
+            return "\n".join(text_parts), None
+
+        return None, "No response from server"
+
+    def list_tools(self):
+        """List available MCP tools."""
+        result = self.request("tools/list", {}, "list")
+        if result:
+            return result.get("result", {}).get("tools", [])
+        return []
+
+
+def main():
+    if len(sys.argv) < 2:
+        tool_name = "help"
+        args = []
+    else:
+        tool_name = sys.argv[1]
+        args = sys.argv[2:]
+
+    try:
+        client = MCPClient()
+        client.initialize()
+
+        if tool_name == "help":
+            if args:
+                # Show help for specific tool
+                tools = client.list_tools()
+                target = args[0]
+                for tool in tools:
+                    if tool.get("name") == target:
+                        print(f"Tool: {tool.get('name')}\n")
+                        print(f"Description:\n  {tool.get('description', 'No description')}\n")
+                        schema = tool.get("inputSchema", {})
+                        props = schema.get("properties", {})
+                        required = schema.get("required", [])
+                        if props:
+                            print("Parameters:")
+                            for name, info in props.items():
+                                req = " (required)" if name in required else ""
+                                desc = info.get("description", "")[:60]
+                                print(f"  --{name:25} {desc}{req}")
+                        return 0
+                print(f"Tool not found: {target}")
+                return 1
+            else:
+                # List all tools
+                tools = client.list_tools()
+                print(f"Available tools ({len(tools)}):\n")
+                for tool in sorted(tools, key=lambda t: t.get("name", "")):
+                    name = tool.get("name", "")
+                    desc = tool.get("description", "")[:60]
+                    print(f"  {name:30} {desc}")
+                return 0
+
+        # Call tool
+        params = parse_args(args)
+        result, error = client.call_tool(tool_name, params)
+
+        if error:
+            print(f"Error: {error}", file=sys.stderr)
+            return 1
+
+        if result:
+            print(result)
+
+        return 0
+
+    except httpx.ConnectError:
+        print(f"Error: Cannot connect to Serena at {SERENA_URL}", file=sys.stderr)
+        print("Make sure Serena is running.", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+PYTHON_SCRIPT
+}
+
+# === Main Command Router ===
+
+case "${1:-help}" in
+    setup)
+        log "Setting up Serena CLI..."
+        ensure_venv
+        ensure_symlink
+        add_claude_permission 'Bash(serena:*)'
+        log "Done. Run 'serena get_current_config' to verify connection."
+        ;;
+
+    *)
+        ensure_venv
+        run_mcp_command "$@"
+        ;;
+esac

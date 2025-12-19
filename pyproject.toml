@@ -1,14 +1,14 @@
 [project]
-name = "serena"
+name = "serena-integration"
 version = "2.0.0"
-description = "Semantic code intelligence via LSP for AI agents"
+description = "Semantic PHP code navigation via Serena LSP - standalone MCP client"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [
-    { name = "Sebastian" }
+    { name = "Sebastian", email = "sebastian.ertner@netresearch.de" }
 ]
-keywords = ["ai", "lsp", "semantic", "code-navigation", "claude", "mcp"]
+keywords = ["ai", "lsp", "semantic", "code-navigation", "claude", "mcp", "php"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -20,7 +20,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
-# Minimal deps - plugin runs in bridge's venv, CLI routes through bridge
+# CLI creates its own venv with httpx
 dependencies = []
 
 [project.optional-dependencies]
@@ -29,8 +29,6 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "ruff>=0.1.0",
 ]
-
-# No CLI entry point - CLI routes through bridge
 
 [build-system]
 requires = ["hatchling"]

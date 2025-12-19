@@ -2,19 +2,17 @@
 
 Claude Code integration with Serena LSP for semantic PHP code navigation.
 
-## Features
-
-- **serena skill**: Core Serena usage guidance and command reference
-- **Slash commands**: `/serena:onboard`, `/serena:load`, `/serena:save`
-- **CLI wrapper**: Routes to Serena MCP server via AI Tool Bridge
-
 ## Architecture
 
 ```
-serena CLI → AI Tool Bridge → Serena MCP server (port 9121)
-                                    ↓
-                              Intelephense LSP
+serena CLI (bin/serena)
+    ↓ MCP streamable-http
+Serena MCP Server (port 9121)
+    ↓
+Intelephense LSP
 ```
+
+Standalone MCP client - no bridge dependency.
 
 ## Setup
 
@@ -27,18 +25,19 @@ cd ~/workspace/KI_Tools/serena
 docker compose up -d
 ```
 
-### 2. CLI Wrapper
-
-The CLI at `~/.local/bin/serena` routes through the bridge:
+### 2. CLI Setup
 
 ```bash
-# Setup (one-time)
+# One-time setup (creates venv, installs deps, adds permissions)
 ~/.claude/plugins/.../serena-integration/bin/serena setup
+
+# Or run any command (auto-setup on first use)
+serena get_current_config
 ```
 
 ### 3. Permissions
 
-Already configured in `~/.claude/settings.json`:
+Added automatically by setup:
 - `Bash(serena:*)` - CLI access
 - `Skill(serena:*)` - Skill access
 
@@ -66,6 +65,12 @@ Core Serena usage - semantic PHP code navigation via LSP:
 - Tool selection: `find_symbol` for PHP, `search_for_pattern` for JS
 - Command reference and troubleshooting
 
+## Slash Commands
+
+- `/serena:onboard` - Activate project and load memories
+- `/serena:load` - Load memories from previous session
+- `/serena:save` - Save session state to memories
+
 ## Project Configuration
 
 Per-project settings in `.serena/project.yml`:
@@ -79,3 +84,9 @@ ignored_paths:
   - node_modules
   - var/cache
 ```
+
+## Changelog
+
+- **2.0.0**: Standalone MCP client - no bridge dependency
+- **1.1.0**: Added slash commands, memory management
+- **1.0.0**: Initial release with bridge dependency
