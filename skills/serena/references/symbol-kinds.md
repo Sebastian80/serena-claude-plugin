@@ -4,7 +4,7 @@ LSP Symbol Kinds used by Serena/Intelephense.
 
 ## Symbol Path Convention
 
-When using `--symbol` with `serena refs` or edit commands:
+When using `--name_path` with `find_referencing_symbols` or edit commands:
 
 | Type | Format | Example |
 |------|--------|---------|
@@ -39,28 +39,35 @@ When using `--symbol` with `serena refs` or edit commands:
 
 ## Filtering by Kind
 
-Use `--kind` flag to filter results:
+Use `--include_kinds` or `--exclude_kinds` with JSON arrays:
 
 ```bash
-# Find only classes
-serena find Customer --kind class
+# Find only classes (kind 5)
+serena find_symbol --name_path_pattern Customer --include_kinds "[5]"
 
-# Find only methods
-serena find get --kind method
+# Find only methods (kind 6)
+serena find_symbol --name_path_pattern get --include_kinds "[6]"
 
-# Find only interfaces
-serena find Interface --kind interface
+# Find only interfaces (kind 11)
+serena find_symbol --name_path_pattern Interface --include_kinds "[11]"
+
+# Find classes and interfaces
+serena find_symbol --name_path_pattern Service --include_kinds "[5, 11]"
+
+# Exclude methods (find everything except methods)
+serena find_symbol --name_path_pattern Customer --exclude_kinds "[6]"
 ```
 
-## Kind Filter Options
+## Kind Filter Quick Reference
 
-| Filter | Kind Number | Matches |
-|--------|-------------|---------|
-| `--kind class` | 5 | Classes, traits, abstract classes |
-| `--kind method` | 6 | Methods, static methods, magic methods |
-| `--kind interface` | 11 | Interfaces |
-| `--kind function` | 12 | Standalone functions |
-| `--kind namespace` | 3 | Namespaces |
+| To Find | Kind Number | Flag |
+|---------|-------------|------|
+| Classes | 5 | `--include_kinds "[5]"` |
+| Methods | 6 | `--include_kinds "[6]"` |
+| Properties | 7 | `--include_kinds "[7]"` |
+| Interfaces | 11 | `--include_kinds "[11]"` |
+| Functions | 12 | `--include_kinds "[12]"` |
+| Namespaces | 3 | `--include_kinds "[3]"` |
 
 ## PHP-Specific Notes
 
@@ -73,26 +80,14 @@ serena find Interface --kind interface
 
 ```bash
 # Find all classes containing "Service"
-serena find Service --kind class
+serena find_symbol --name_path_pattern Service --include_kinds "[5]"
 
 # Find all methods starting with "get"
-serena find "get*" --kind method
+serena find_symbol --name_path_pattern get --include_kinds "[6]" --substring_matching true
 
 # Find all interfaces
-serena find Interface --kind interface
+serena find_symbol --name_path_pattern Interface --include_kinds "[11]" --substring_matching true
 
-# Use recipes for common patterns
-serena recipe controllers    # All *Controller classes
-serena recipe interfaces     # All interfaces
-serena recipe entities       # All Doctrine entities
-```
-
-## JSON Output for Scripting
-
-```bash
-# Get raw kind numbers in JSON
-serena find Customer --json | jq '.[].kind'
-
-# Filter by kind number in jq
-serena find Customer --json | jq '[.[] | select(.kind == 5)]'
+# Get class with its methods (depth 1)
+serena find_symbol --name_path_pattern CustomerService --depth 1
 ```

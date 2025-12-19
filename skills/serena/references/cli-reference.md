@@ -4,7 +4,7 @@ Complete reference for the Serena CLI. For quick overview, see SKILL.md.
 
 ## CLI Architecture
 
-The Serena CLI routes through the AI Tool Bridge which connects to Serena's MCP server.
+Standalone MCP client that talks directly to Serena's MCP server (port 9121).
 All tools are auto-discovered from the MCP server.
 
 ```
@@ -135,7 +135,7 @@ For session continuity. See `references/session-handoff.md` for patterns.
 ```bash
 serena list_memories
 serena read_memory --memory_file_name <name>
-serena write_memory --memory_file_name <name> --content <content>
+serena write_memory --memory_file_name <name> --content "<content>"
 serena search_memories --pattern <regex>
 serena tree_memories
 serena memory_stats
@@ -154,7 +154,7 @@ Symbol-based code editing. **Use with caution - these modify files.**
 Replace a symbol's entire body.
 
 ```bash
-serena replace_symbol_body --name_path <path> --relative_path <file> --body <code>
+serena replace_symbol_body --name_path <path> --relative_path <file> --body "<code>"
 
 Required:
   --name_path        Symbol path (e.g., "Class/method")
@@ -166,8 +166,8 @@ Required:
 Insert code relative to a symbol.
 
 ```bash
-serena insert_after_symbol --name_path <path> --relative_path <file> --body <code>
-serena insert_before_symbol --name_path <path> --relative_path <file> --body <code>
+serena insert_after_symbol --name_path <path> --relative_path <file> --body "<code>"
+serena insert_before_symbol --name_path <path> --relative_path <file> --body "<code>"
 
 Required:
   --name_path        Symbol path to insert relative to
@@ -232,6 +232,6 @@ Used with `--include_kinds` and `--exclude_kinds`. See `references/symbol-kinds.
 |---------|----------|
 | "No symbols found" | Use `--substring_matching true`, broaden pattern |
 | Empty refs | Use `find_symbol` first to get exact file path |
-| Connection error | Run `serena get_current_config`, check daemon |
+| Connection error | Run `serena get_current_config`, check Serena server |
 | Timeout | Add `--relative_path` to reduce scope |
 | "Tool not found" | Run `serena help` to list available tools |

@@ -6,10 +6,10 @@ When to use Serena's symbol-based editing vs. standard Edit tool.
 
 | Scenario | Serena | Standard Edit |
 |----------|--------|---------------|
-| Replace entire method body | `serena edit replace` | - |
-| Add new method to class | `serena edit after` | - |
-| Add import statement | `serena edit before` | - |
-| Rename method/class | `serena edit rename` | - |
+| Replace entire method body | `replace_symbol_body` | - |
+| Add new method to class | `insert_after_symbol` | - |
+| Add import statement | `insert_before_symbol` | - |
+| Rename method/class | `rename_symbol` | - |
 | Change few lines in method | - | Edit tool |
 | Fix typo in string | - | Edit tool |
 | Modify config files | - | Edit tool |
@@ -17,72 +17,68 @@ When to use Serena's symbol-based editing vs. standard Edit tool.
 
 ## Symbol Editing Operations
 
-### serena edit replace
+### replace_symbol_body
 
 Replaces the entire body of a symbol (method, function, class).
 
 ```bash
-serena edit replace "Customer/calculateTotal" src/Entity/Customer.php '
-    $total = 0;
-    foreach ($this->items as $item) {
-        $total += $item->getPrice();
+serena replace_symbol_body \
+  --name_path "Customer/calculateTotal" \
+  --relative_path src/Entity/Customer.php \
+  --body "public function calculateTotal(): int
+{
+    \$total = 0;
+    foreach (\$this->items as \$item) {
+        \$total += \$item->getPrice();
     }
-    return $total;
-'
+    return \$total;
+}"
 ```
 
 **Best for**: Rewriting methods, updating function logic.
 
-### serena edit after
+### insert_after_symbol
 
 Inserts code after a symbol. Useful for adding methods.
 
 ```bash
-serena edit after "Customer/getName" src/Entity/Customer.php '
+serena insert_after_symbol \
+  --name_path "Customer/getName" \
+  --relative_path src/Entity/Customer.php \
+  --body "
     public function getFullName(): string
     {
-        return $this->firstName . " " . $this->lastName;
-    }
-'
+        return \$this->firstName . ' ' . \$this->lastName;
+    }"
 ```
 
 **Best for**: Adding new methods, appending to class.
 
-### serena edit before
+### insert_before_symbol
 
 Inserts code before a symbol. Useful for imports.
 
 ```bash
-# Add use statement before class
-serena edit before "Customer" src/Entity/Customer.php 'use App\Service\Calculator;'
+serena insert_before_symbol \
+  --name_path "Customer" \
+  --relative_path src/Entity/Customer.php \
+  --body "use App\\Service\\Calculator;"
 ```
 
 **Best for**: Adding imports, docblocks, annotations.
 
-### serena edit rename
+### rename_symbol
 
 Renames a symbol and updates all references.
 
 ```bash
-serena edit rename "Customer/getName" src/Entity/Customer.php "getCustomerName"
+serena rename_symbol \
+  --name_path "Customer/getName" \
+  --relative_path src/Entity/Customer.php \
+  --new_name "getCustomerName"
 ```
 
 **Best for**: Refactoring, renaming methods/classes.
-
-## Using stdin for Multi-line Code
-
-For complex code blocks, use stdin:
-
-```bash
-# Read body from stdin
-cat <<'EOF' | serena edit replace "Customer/calculateTotal" src/Entity/Customer.php -
-    $total = 0;
-    foreach ($this->items as $item) {
-        $total += $item->getPrice();
-    }
-    return $total;
-EOF
-```
 
 ## When NOT to Use Symbol Editing
 
@@ -95,19 +91,27 @@ EOF
 
 ```bash
 # 1. Find where to add
-serena overview src/Entity/Customer.php
+serena get_symbols_overview --relative_path src/Entity/Customer.php
 
 # 2. Check existing code
-serena find "Customer/getName" --body
+serena find_symbol --name_path_pattern "Customer/getName" --include_body true
 
 # 3. Insert new code
-serena edit after "Customer/getName" src/Entity/Customer.php 'public function newMethod() {}'
+serena insert_after_symbol \
+  --name_path "Customer/getName" \
+  --relative_path src/Entity/Customer.php \
+  --body "public function newMethod() {}"
 
 # 4. Add imports if needed
-serena edit before "Customer" src/Entity/Customer.php 'use App\Service\NewService;'
+serena insert_before_symbol \
+  --name_path "Customer" \
+  --relative_path src/Entity/Customer.php \
+  --body "use App\\Service\\NewService;"
 
 # 5. Check references if needed
-serena refs "Customer/getName" src/Entity/Customer.php
+serena find_referencing_symbols \
+  --name_path "Customer/getName" \
+  --relative_path src/Entity/Customer.php
 ```
 
 ## Error Handling
@@ -121,8 +125,11 @@ Always verify symbol exists before editing:
 
 ```bash
 # Check symbol exists first
-serena find "Customer/getName" --path src/Entity/Customer.php
+serena find_symbol --name_path_pattern "Customer/getName" --relative_path src/Entity/Customer.php
 
 # Then edit if found
-serena edit replace "Customer/getName" src/Entity/Customer.php 'return $this->name;'
+serena replace_symbol_body \
+  --name_path "Customer/getName" \
+  --relative_path src/Entity/Customer.php \
+  --body "public function getName(): string { return \$this->name; }"
 ```

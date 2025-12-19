@@ -28,7 +28,7 @@ Claude Code sessions are stateless. Serena memories provide:
 Before ending work, save context:
 
 ```bash
-serena memory write task_context "## Current Task
+serena write_memory --memory_file_name task_context --content "## Current Task
 Implementing customer validation
 
 ## Progress
@@ -46,33 +46,17 @@ Implementing customer validation
 - Need to handle legacy customers specially"
 ```
 
-Or use stdin for complex content:
-
-```bash
-cat <<'EOF' | serena memory write task_context -
-## Current Task
-Implementing customer validation
-
-## Progress
-- [x] Added CustomerValidator class
-- [ ] Add unit tests
-
-## Key Files
-- src/Validator/CustomerValidator.php
-EOF
-```
-
 ### Start of Session
 
 Resume work by reading memories:
 
 ```bash
 # List available memories
-serena memory list
+serena list_memories
 
 # Read relevant context
-serena memory read project_overview
-serena memory read task_context
+serena read_memory --memory_file_name project_overview
+serena read_memory --memory_file_name task_context
 ```
 
 ### After Completing Task
@@ -80,7 +64,7 @@ serena memory read task_context
 Update completion status:
 
 ```bash
-serena memory write task_completion "## Completed: Customer Validation
+serena write_memory --memory_file_name task_completion --content "## Completed: Customer Validation
 Date: 2025-12-05
 
 ### What was done
@@ -141,7 +125,7 @@ Agents can write findings to memory for the main context:
 
 ```bash
 # Agent writes exploration results
-serena memory write exploration_results "## Architecture Analysis: Authentication
+serena write_memory --memory_file_name exploration_results --content "## Architecture Analysis: Authentication
 
 ### Key Classes
 - AuthenticationManager (src/Security/AuthenticationManager.php)
@@ -162,7 +146,7 @@ Then in main context:
 
 ```bash
 # Read agent's findings
-serena memory read exploration_results
+serena read_memory --memory_file_name exploration_results
 ```
 
 ## Tips
@@ -172,4 +156,4 @@ serena memory read exploration_results
 3. **Include dates**: For time-sensitive context
 4. **List files changed**: Helps resume work
 5. **Note blockers**: Don't lose important issues
-6. **Clean up old memories**: `serena memory delete old_task`
+6. **Clean up old memories**: `serena delete_memory --memory_file_name old_task`

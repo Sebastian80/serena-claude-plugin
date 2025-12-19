@@ -1,5 +1,25 @@
 # Serena Skill Changelog
 
+## 2025-12-19: v2.0.0 - Standalone Architecture
+
+### Breaking Changes
+- Removed bridge dependency entirely
+- CLI now talks directly to Serena MCP server (streamable-http)
+- Self-bootstrapping with own venv
+
+### Changed
+- Consolidated plugin manifests into single `plugin.json` at root
+- Updated all reference docs with correct MCP tool names
+- Removed dead code (plugin.py, scripts/, manifest.json)
+
+### Command Syntax
+All commands now use full MCP tool names:
+- `serena find_symbol` (not `serena find`)
+- `serena find_referencing_symbols` (not `serena refs`)
+- `serena write_memory` (not `serena memory write`)
+
+---
+
 ## 2025-12-08: JetBrains MCP Integration
 
 ### Added
