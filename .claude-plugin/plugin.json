@@ -1,6 +1,6 @@
 {
-  "name": "serena",
-  "version": "1.1.0",
+  "name": "serena-integration",
+  "version": "1.2.0",
   "description": "Semantic PHP code navigation via LSP. Symbol search, references, refactoring, cross-session memory.",
   "author": {
     "name": "Sebastian"
