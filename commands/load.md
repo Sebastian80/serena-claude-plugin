@@ -7,60 +7,52 @@ allowed-tools:
 
 # /serena:load - Restore Session Context
 
-Quick session restoration with memory recovery.
+## Steps
 
-## Execute These Steps
-
-### 1. Check Status & Activate
+### 1. Activate Project
 
 ```bash
 serena get_current_config
 ```
 
-If no project active:
+If not active:
 ```bash
 serena activate_project --project "$(pwd)"
 ```
 
-### 2. Show Memory Structure
+### 2. Show Structure
 
 ```bash
 serena tree_memories
 ```
 
-### 3. List Available Memories
+### 3. Load Active Context
 
 ```bash
-serena list_memories
+# Current session
+serena read_memory --memory_file_name "active/sessions/current"
+
+# Active tasks
+serena list_memories --folder "active/tasks"
 ```
 
-### 4. Load Key Memories
+Read any active tasks found.
 
-```bash
-serena read_memory --memory_file_name project_overview
-serena read_memory --memory_file_name task_context
-```
-
-Load any session-specific memories that exist.
-
-### 5. Report Session State
-
-Present a structured summary:
+### 4. Report
 
 ```
 ## Session Restored
 
-**Project**: [project path]
-**Languages**: PHP
+**Project**: [path]
 
-### Available Memories
-[List from list_memories]
+### Active Work
+[from active/sessions/current]
 
-### Project Context
-[Summary from project_overview]
+### Tasks In Progress
+[list from active/tasks/]
 
-### Previous Task
-[Summary from task_context if exists]
+### Reference Available
+[list folders from reference/]
 
 Ready to continue.
 ```

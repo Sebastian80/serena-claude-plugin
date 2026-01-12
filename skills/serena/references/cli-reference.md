@@ -4,13 +4,30 @@ Complete reference for the Serena CLI. For quick overview, see SKILL.md.
 
 ## CLI Architecture
 
-Standalone MCP client that talks directly to Serena's MCP server (port 9121).
-All tools are auto-discovered from the MCP server.
+Standalone MCP client that talks to Serena's MCP server.
+
+**Two backend options:**
+- **LSP (Intelephense)**: Port 9121, auto-downloaded language server
+- **JetBrains Plugin**: Ports 24226-24246, leverages PhpStorm's code analysis
+
+See `references/backends.md` for backend selection.
 
 ```
 serena <tool_name> --param value
 serena help                        # List all tools
 serena help <tool_name>            # Detailed tool help
+```
+
+## Backend Configuration
+
+```yaml
+# ~/.serena/serena_config.yml
+language_backend: JetBrains  # or LSP (default)
+```
+
+Or per-session:
+```bash
+serena start-mcp-server --language-backend JetBrains
 ```
 
 ## Core Search Tools
@@ -226,6 +243,43 @@ Used with `--include_kinds` and `--exclude_kinds`. See `references/symbol-kinds.
 | 11 | Interface |
 | 12 | Function |
 
+## JetBrains-Specific Tools
+
+When using JetBrains backend, these tools are available instead of their LSP counterparts:
+
+### jet_brains_find_symbol
+Same as `find_symbol` but uses PhpStorm's code analysis.
+```bash
+serena jet_brains_find_symbol --name_path_pattern Customer
+```
+
+### jet_brains_find_referencing_symbols
+Same as `find_referencing_symbols` but with IDE-level accuracy.
+```bash
+serena jet_brains_find_referencing_symbols --name_path Customer --relative_path src/Entity/Customer.php
+```
+
+### jet_brains_get_symbols_overview
+Same as `get_symbols_overview` but leverages IDE indexing.
+```bash
+serena jet_brains_get_symbols_overview --relative_path src/Entity/Customer.php
+```
+
+**Note:** The CLI abstracts backend differences. Use `serena find_symbol` and it routes to the correct backend tool automatically.
+
+## Vendor Directory Configuration
+
+### LSP Backend
+```yaml
+# .serena/project.yml
+ls_specific_settings:
+  php:
+    ignore_vendor: false  # Enable vendor indexing (slower)
+```
+
+### JetBrains Backend
+Vendor is automatically indexed by PhpStorm. No configuration needed.
+
 ## Troubleshooting
 
 | Problem | Solution |
@@ -235,3 +289,5 @@ Used with `--include_kinds` and `--exclude_kinds`. See `references/symbol-kinds.
 | Connection error | Run `serena get_current_config`, check Serena server |
 | Timeout | Add `--relative_path` to reduce scope |
 | "Tool not found" | Run `serena help` to list available tools |
+| "No vendor symbols" | Use JetBrains backend or set `ignore_vendor: false` |
+| JetBrains not responding | Ensure PhpStorm is running with project open |

@@ -1,6 +1,6 @@
 ---
 name: onboard
-description: Activate project in Serena, run onboarding, and load existing memories for session handoff
+description: Activate project in Serena, initialize memory structure, and load session context
 allowed-tools:
   - Bash
   - Read
@@ -8,68 +8,67 @@ allowed-tools:
 
 # Serena Project Onboarding
 
-Perform complete Serena project setup and session initialization.
+## Steps
 
-## Steps to Execute
-
-### 1. Check Status & Activate Project
+### 1. Activate Project
 
 ```bash
 serena get_current_config
 ```
 
-If no project is active or wrong project is active:
-
+If wrong project or none active:
 ```bash
 serena activate_project --project "$(pwd)"
 ```
 
-If activation times out (common for large codebases), run `serena get_current_config` to verify.
-
-### 2. List Available Memories
+### 2. Check Memory Structure
 
 ```bash
-serena list_memories
+serena tree_memories
 ```
 
-### 3. Read Key Memories
+If empty or missing folders:
+```bash
+serena init_memories
+```
+
+### 3. Load Session Context
 
 ```bash
-# Project overview
-serena read_memory --memory_file_name project_overview
+# List active work
+serena list_memories --folder "active"
 
-# Any task context from previous session
-serena read_memory --memory_file_name task_context
+# Read current session (if exists)
+serena read_memory --memory_file_name "active/sessions/current"
+
+# Read any active tasks
+serena list_memories --folder "active/tasks"
 ```
 
-## Output
+### 4. Load Reference Docs (if needed)
 
-After completing all steps, summarize:
+```bash
+serena list_memories --folder "reference"
+# Read relevant ones based on task
+```
 
-1. **Project Status**: Activated and onboarded?
-2. **Available Memories**: List of memory names
-3. **Key Context**: Summary of project_overview and task_context
-4. **Ready for Work**: Confirm Serena is ready
-
-## Example Summary
+## Output Summary
 
 ```
-## Serena Onboarding Complete
+## Serena Ready
 
-**Project**: /home/sebastian/workspace/hmkg
-**Status**: Activated and onboarded
+**Project**: [path]
+**Status**: Activated
 
-### Available Memories
-- project_overview
-- code_conventions
-- bundle_architecture
-- task_context
+### Memory Structure
+[tree output]
 
-### Project Context
-[Summary from project_overview memory]
+### Active Work
+- Sessions: [list]
+- Tasks: [list]
 
-### Previous Task
-[Summary from task_context memory, if exists]
+### Reference Available
+- [folder list]
 
-Serena is ready. 23 tools available.
+Ready for work.
 ```

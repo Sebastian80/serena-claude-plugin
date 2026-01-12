@@ -6,88 +6,81 @@ allowed-tools:
 
 # /serena:save - Persist Session Context
 
-Save current session state to Serena memories.
+## Steps
 
-## Execute These Steps
+### 1. Analyze Current Session
 
-### 1. Gather Session Context
-
-Before saving, analyze the current session:
+Before saving, identify:
 - What tasks were worked on?
 - What was accomplished?
 - What's still in progress?
-- What was learned?
 
 ### 2. Save Session State
 
 ```bash
-serena write_memory --memory_file_name "sessions/$(date '+%Y-%m-%d')" --content "## Session: $(date '+%Y-%m-%d')
+serena write_memory --memory_file_name "active/sessions/current" --content "## Session: $(date '+%Y-%m-%d')
 
-### What I Worked On
-- [list main tasks]
+### Working On
+- [task/ticket]
 
-### Current State
-[describe where things are at]
+### Progress
+- [what was done]
 
-### Key Files Modified
-- [file paths]
+### Next
+- [what's remaining]
 "
 ```
 
-### 3. Save Task Progress (if working on ticket)
+### 3. Save/Update Task Progress
 
 ```bash
-serena write_memory --memory_file_name "tasks/HMKG-XXXX" --content "## Task: [name]
+serena write_memory --memory_file_name "active/tasks/TICKET-ID" --content "## TICKET-ID: [title]
 
 ### Status: in_progress
 
-### Completed
-- [x] Step 1
+### Done
+- [x] Completed step
 
-### Remaining
-- [ ] Next step
+### Next
+- [ ] Remaining step
 
 ### Key Files
-- [file paths]
+- [paths]
 "
 ```
 
-### 4. Save Learnings (if discovered something)
+### 4. Archive Completed Tasks
 
 ```bash
-serena write_memory --memory_file_name "learnings/[topic]" --content "## [Topic]
+serena archive_memory --memory_file_name "active/tasks/TICKET-ID" --category "completed"
+```
 
-### Context
-[when you might need this]
+### 5. Save Learnings (if any)
 
-### Details
-[what you learned]
+```bash
+serena write_memory --memory_file_name "learnings/discoveries/[topic]" --content "## [Topic]
+
+[what you learned and when it's useful]
 "
 ```
 
-### 5. Archive Completed Tasks
+### 6. Confirm
 
 ```bash
-serena archive_memory --memory_file_name "tasks/HMKG-XXXX" --category "completed"
-```
-
-### 6. Confirm Save
-
-```bash
-serena list_memories
+serena tree_memories
 serena memory_stats
 ```
 
-Report what was saved:
+Report:
 ```
 ## Session Saved
 
-**Memories Updated:**
-- sessions/[date]
-- tasks/[ticket]
+**Updated:**
+- active/sessions/current
+- active/tasks/[ticket]
 
-**Learnings Added:**
-- learnings/[topic]
+**Archived:**
+- [completed tickets]
 
-Ready for session handoff.
+Ready for handoff.
 ```
